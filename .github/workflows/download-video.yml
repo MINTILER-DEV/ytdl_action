@@ -1,0 +1,49 @@
+name: Download and Serve Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: 'URL of the video to download'
+        required: true
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install yt-dlp
+        run: pip install yt-dlp
+
+      - name: Download video
+        run: |
+          yt-dlp -o "video.mp4" "${{ github.event.inputs.video_url }}"
+
+      - name: Upload video as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: video
+          path: video.mp4
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: download
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: video
+          path: video
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./video
